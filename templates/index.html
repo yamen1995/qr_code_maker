@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Code Maker</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>QR Code Maker</h1>
+  <form id="qrForm">
+    <input type="text" name="qrdata" id="qrdata" placeholder="Enter text or URL" required>
+    <button type="submit">Generate</button>
+  </form>
+  <img id="qrImage" style="margin-top: 20px; max-width: 300px;">
+  <script>
+    document.getElementById('qrForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const response = await fetch('/generate', {
+        method: 'POST',
+        body: formData
+      });
+      const blob = await response.blob();
+      document.getElementById('qrImage').src = URL.createObjectURL(blob);
+    });
+  </script>
+</body>
+</html>
