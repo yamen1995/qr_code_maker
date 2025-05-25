@@ -8,21 +8,34 @@
 <body>
   <h1>QR Code Maker</h1>
   <form id="qrForm">
-    <input type="text" name="qrdata" id="qrdata" placeholder="Enter text or URL" required>
-    <button type="submit">Generate</button>
-  </form>
-  <img id="qrImage" style="margin-top: 20px; max-width: 300px;">
+  <input type="text" name="qrdata" id="qrdata" placeholder="Enter text or URL" required><br>
+  <label>Foreground:</label>
+  <input type="color" name="fg" value="#000000">
+  <label>Background:</label>
+  <input type="color" name="bg" value="#ffffff"><br>
+  <label><input type="radio" name="colortype" value="solid" checked> Solid</label>
+  <label><input type="radio" name="colortype" value="gradient"> Gradient</label><br><br>
+  <button type="submit">Generate</button>
+</form>
+
+<a id="downloadLink" style="display:none;" download="qr.png">Download QR Code</a><br>
+<img id="qrImage" style="margin-top: 20px; max-width: 300px;">
   <script>
-    document.getElementById('qrForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const response = await fetch('/generate', {
-        method: 'POST',
-        body: formData
-      });
-      const blob = await response.blob();
-      document.getElementById('qrImage').src = URL.createObjectURL(blob);
-    });
-  </script>
+  document.getElementById('qrForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const response = await fetch('/generate', {
+  method: 'POST',
+  body: new FormData(e.target)
+});
+const blob = await response.blob();
+const imageUrl = URL.createObjectURL(blob);
+
+document.getElementById('qrImage').src = imageUrl;
+document.getElementById('downloadLink').href = imageUrl;
+document.getElementById('downloadLink').style.display = 'inline-block';
+
+  });
+</script>
 </body>
 </html>
