@@ -1,11 +1,19 @@
 from flask import Flask, render_template, request, send_file
 import qrcode
 from qrcode.image.styledpil import StyledPilImage
-from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
-from qrcode.image.styles.colormasks import RadialGradiantColorMask, SolidFillColorMask
+from qrcode.image.styles.moduledrawers import (
+    RoundedModuleDrawer, GappedSquareModuleDrawer,
+    HorizontalBarsDrawer, VerticalBarsDrawer, CircleModuleDrawer
+)
+from qrcode.image.styles.colormasks import (
+    SolidFillColorMask, RadialGradiantColorMask
+)
+from PIL import Image, ImageDraw, ImageFont
+from pathlib import Path
 import io
 
 app = Flask(__name__)
+
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
@@ -17,40 +25,60 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate_qr():
     data = request.form['qrdata']
+    fg_color = hex_to_rgb(request.form.get('fg', '#000000'))
+    bg_color = hex_to_rgb(request.form.get('bg', '#ffffff'))
     color_type = request.form.get('colortype', 'solid')
-    fg_hex = request.form.get('fg', '#000000')
-    bg_hex = request.form.get('bg', '#ffffff')
-    fg_color = hex_to_rgb(fg_hex)
-    bg_color = hex_to_rgb(bg_hex)
+    theme = request.form.get('theme', 'rounded')
+    title_text = request.form.get('title', '').strip()
 
-    # Choose color mask
+    # Color mask
     if color_type == 'gradient':
         color_mask = RadialGradiantColorMask(center_color=fg_color, edge_color=bg_color)
     else:
         color_mask = SolidFillColorMask(front_color=fg_color, back_color=bg_color)
 
-    # Build QR code
+    # Module drawer (theme)
+    drawer_map = {
+        'rounded': RoundedModuleDrawer(),
+        'gapped': GappedSquareModuleDrawer(),
+        'horizontal': HorizontalBarsDrawer(),
+        'vertical': VerticalBarsDrawer(),
+        'circle': CircleModuleDrawer()
+    }
+    module_drawer = drawer_map.get(theme, RoundedModuleDrawer())
+
+    # Generate QR image
     qr = qrcode.QRCode(box_size=10, border=4)
     qr.add_data(data)
     qr.make(fit=True)
-
-    img = qr.make_image(
+    qr_img = qr.make_image(
         image_factory=StyledPilImage,
-        module_drawer=RoundedModuleDrawer(),
+        module_drawer=module_drawer,
         color_mask=color_mask
-    )
+    ).convert("RGB")
 
-    # Save image to a BytesIO buffer as PNG
-    img_buffer = io.BytesIO()
-    img.save(img_buffer, format='PNG')
-    img_buffer.seek(0)
+    # Add title if provided
+    if title_text:
+        font_path = str(Path("C:/Windows/Fonts/arial.ttf"))  # Make sure this path exists
+        font = ImageFont.truetype(font_path, size=28)
+        dummy_img = Image.new("RGB", (1, 1))
+        dummy_draw = ImageDraw.Draw(dummy_img)
+        bbox = dummy_draw.textbbox((0, 0), title_text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        new_width = max(qr_img.width, text_width + 20)
+        new_height = qr_img.height + text_height + 20
 
-    # Return the image as a file
-    return send_file(
-        img_buffer,
-        mimetype='image/png',
-        as_attachment=False,
-        download_name='qr_code.png'
-    )
+        new_img = Image.new("RGB", (new_width, new_height), color=bg_color)
+        draw = ImageDraw.Draw(new_img)
+        draw.text(((new_width - text_width) // 2, 10), title_text, fill=fg_color, font=font)
+        new_img.paste(qr_img, ((new_width - qr_img.width) // 2, text_height + 20))
+        qr_img = new_img
+
+    # Return image
+    buffer = io.BytesIO()
+    qr_img.save(buffer, format='PNG')
+    buffer.seek(0)
+    return send_file(buffer, mimetype='image/png', as_attachment=False, download_name='qr_code.png')
 if __name__ == '__main__':
     app.run(debug=True)
