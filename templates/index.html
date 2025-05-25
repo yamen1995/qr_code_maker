@@ -25,27 +25,18 @@
   <option value="vertical">Vertical Bars</option>
   <option value="circle">Circles</option>
 </select>
+<label for="border">QR Border Style:</label>
+<select name="border" id="border">
+  <option value="none">None</option>
+  <option value="thin">Thin Black Border</option>
+  <option value="thick">Thick Colored Border</option>
+  <option value="rounded">Rounded Colored Border</option>
+</select>
   <button type="submit">Generate</button>
 </form>
 
 <a id="downloadLink" style="display:none;" download="qr.png">Download QR Code</a><br>
 <img id="qrImage" style="margin-top: 20px; max-width: 300px;">
-  <script>
-  document.getElementById('qrForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const response = await fetch('/generate', {
-  method: 'POST',
-  body: new FormData(e.target)
-});
-const blob = await response.blob();
-const imageUrl = URL.createObjectURL(blob);
-
-document.getElementById('qrImage').src = imageUrl;
-document.getElementById('downloadLink').href = imageUrl;
-document.getElementById('downloadLink').style.display = 'inline-block';
-
-  });
-</script>
+ <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

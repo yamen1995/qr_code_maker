@@ -74,7 +74,24 @@ def generate_qr():
         draw.text(((new_width - text_width) // 2, 10), title_text, fill=fg_color, font=font)
         new_img.paste(qr_img, ((new_width - qr_img.width) // 2, text_height + 20))
         qr_img = new_img
+    border_style = request.form.get('border', 'none')
 
+    if border_style != 'none':
+      border_thickness = 4 if border_style == 'thin' else 16
+      border_color = fg_color if border_style != 'thin' else (0, 0, 0)
+      new_size = (qr_img.width + 2 * border_thickness, qr_img.height + 2 * border_thickness)
+
+      bordered_img = Image.new("RGB", new_size, color=border_color)
+      bordered_img.paste(qr_img, (border_thickness, border_thickness))
+
+      if border_style == 'rounded':
+        # Add rounded corners by masking
+        mask = Image.new("L", new_size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rounded_rectangle([0, 0, *new_size], radius=20, fill=255)
+        qr_img = Image.composite(bordered_img, Image.new("RGB", new_size, bg_color), mask)
+      else:
+        qr_img = bordered_img
     # Return image
     buffer = io.BytesIO()
     qr_img.save(buffer, format='PNG')
